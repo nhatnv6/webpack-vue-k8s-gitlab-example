@@ -1,0 +1,49 @@
+# k8s.prod.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-frontend-svc
+spec:
+  selector:
+    app: my-frontend
+    tier: frontend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: frontend-port # max 15 characters
+  selector:
+    app: my-frontend
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-frontend
+spec:
+  selector:
+    matchLabels:
+      app: my-frontend
+      tier: frontend
+      track: stable
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 50%
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: my-frontend
+        tier: frontend
+        track: stable
+    spec:
+      containers:
+        - name: my-frontend-container
+          image: "FRONTEND_IMAGE_TAG" # will be replaced later by Ci
+          ports:
+            - name: frontend-port
+              containerPort: 80
+          imagePullPolicy: Always
+      imagePullSecrets:
+        - name: YOUR_SECRET_NAME

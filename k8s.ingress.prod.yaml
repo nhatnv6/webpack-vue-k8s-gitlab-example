@@ -1,0 +1,23 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: my-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-body-size: 50m
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+spec:
+  tls: # for https
+    - hosts:
+        - SOME_HOST
+      secretName: my-certificate
+  rules:
+    - host: SOME_HOST
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: my-frontend-svc
+              servicePort: 80
