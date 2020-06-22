@@ -1,4 +1,4 @@
-# k8s.prod.yaml
+# k8s.dev.yaml
 apiVersion: v1
 kind: Service
 metadata:
@@ -11,8 +11,6 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: frontend-port # max 15 characters
-  selector:
-    app: my-frontend
   type: ClusterIP
 ---
 apiVersion: apps/v1
@@ -21,16 +19,11 @@ metadata:
   name: my-frontend
 spec:
   selector:
-    matchLabels:
+    matchLabels: # help Deployment finds which Pods to manage
       app: my-frontend
       tier: frontend
       track: stable
-  replicas: 2
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 50%
-      maxSurge: 1
+  replicas: 2 # Deployment creates 2 replicated Pods
   template:
     metadata:
       labels:

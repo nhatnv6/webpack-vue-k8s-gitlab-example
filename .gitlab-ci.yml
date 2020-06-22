@@ -9,19 +9,10 @@ variables:
   KUBECTL_URL: "https://storage.googleapis.com/kubernetes-release/release/v1.12.1/bin/linux/amd64/kubectl"
   DOCKER_DIND: docker:19.03-dind
 
-.build_template: &build_definition
+build:
   stage: build
   before_script:
-    - echo "Start building"
     - yarn install
-.package_template: &package_definition
-  stage: package
-  image: $PACKAGE_IMAGE
-.deploy_template: &deploy_definition
-  stage: deploy
-  image: $DEPLOY_IMAGE
-build_prod:
-  <<: *build_definition
   script:
     - yarn build
   artifacts:
@@ -29,39 +20,44 @@ build_prod:
       - dist/*
     expire_in: 3 days
   only:
-    - master
-package_prod:
-  <<: *package_definition
+    - develop
+
+package:
+  stage: package
+  image: $PACKAGE_IMAGE
   services:
     - $DOCKER_DIND
   variables:
     IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
   before_script:
     - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
-    - echo "Start building for production"
   script:
     - docker build -t $IMAGE_TAG .
     - docker push $IMAGE_TAG
   only:
-    - master
-deploy_prod:
-  <<: *deploy_definition
+    - develop
+
+deploy:
+  stage: deploy
+  image: $DEPLOY_IMAGE
   environment:
-    name: production
+    name: development
   services:
     - $DOCKER_DIND
   variables:
     IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
   before_script:
-    - echo "Start deploying to production ..."
+    - echo "Start deploying ..."
   script:
     - apk update && apk add --no-cache curl
     - curl -LO $KUBECTL_URL
     - chmod +x ./kubectl && mv ./kubectl /usr/local/bin/kubectl
     - mkdir -p $HOME/.kube
     - echo -n $KUBE_CONFIG | base64 -d > $HOME/.kube/config
-    - sed -i "s#FRONTEND_IMAGE_TAG#$IMAGE_TAG#g" k8s.prod.yaml
-    - kubectl --kubeconfig $HOME/.kube/config --namespace=YOUR_NAME_SPACE apply -f k8s.prod.yaml
-    - kubectl --kubeconfig $HOME/.kube/config --namespace=YOUR_NAME_SPACE apply -f k8s.ingress.prod.yaml
+    - sed -i "s#FRONTEND_IMAGE_TAG#$IMAGE_TAG#g" k8s.dev.yaml
+
+    - kubectl --kubeconfig $HOME/.kube/config --namespace=YOUR_NAME_SPACE apply -f k8s.dev.yaml
+
+    - kubectl --kubeconfig $HOME/.kube/config --namespace=YOUR_NAME_SPACE apply -f k8s.ingress.dev.yaml
   only:
-    - master
+    - develop
